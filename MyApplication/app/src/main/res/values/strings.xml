@@ -1,0 +1,5 @@
+<resources>
+	<string name="app_name">MyOpenglApp</string>
+	<string name="action_photo">Photo</string>
+	<string name="action_import_model">Model</string>
+</resources>
