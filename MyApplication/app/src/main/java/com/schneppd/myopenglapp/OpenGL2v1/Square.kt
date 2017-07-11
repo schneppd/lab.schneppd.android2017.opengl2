@@ -1,4 +1,4 @@
-package com.schneppd.myopenglapp.OpenGL2
+package com.schneppd.myopenglapp.OpenGL2v1
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
