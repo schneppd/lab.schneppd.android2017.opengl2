@@ -21,6 +21,7 @@
 
 		/>
 	<com.schneppd.myopenglapp.OpenGL2v2.CustomGLSurfaceView
+		android:id="@+id/svUserModel"
 		android:layout_width="0dp"
 		android:layout_height="0dp"
 		app:layout_constraintBottom_toBottomOf="parent"
@@ -28,6 +29,7 @@
 		app:layout_constraintRight_toRightOf="parent"
 		app:layout_constraintTop_toTopOf="parent"
 		android:windowIsTranslucent="true"
+		android:visibility="invisible"
 		/>
 
 
