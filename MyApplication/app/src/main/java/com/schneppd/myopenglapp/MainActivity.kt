@@ -43,6 +43,13 @@ class MainActivity : AppCompatActivity() {
 		*/
 	}
 
+	override fun onDestroy() {
+		if(currentPhotoPath.isEmpty()){
+			deletePreviousFile()
+		}
+		super.onDestroy()
+	}
+
 	override fun onCreateOptionsMenu(menu: Menu): Boolean {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		menuInflater.inflate(R.menu.menu_main, menu)
@@ -80,6 +87,10 @@ class MainActivity : AppCompatActivity() {
 
 		val serviceProvider = takePictureIntent.resolveActivity(packageManager)
 		serviceProvider?.let {
+			if(currentPhotoPath.isEmpty()){
+				deletePreviousFile()
+			}
+
 			var photoFile:File? = createImageSaveFile()
 			photoFile?: return
 			val photoURI = FileProvider.getUriForFile(this, "com.schneppd.myopenglapp.fileprovider", photoFile)
@@ -88,6 +99,12 @@ class MainActivity : AppCompatActivity() {
 			//startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
 			startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO)
 		}?: Snackbar.make(ivUserPicture, "No photo app installed", Snackbar.LENGTH_LONG).setAction("Action", null).show()
+	}
+
+	fun deletePreviousFile(){
+		val fileUri = "file://" + currentPhotoPath
+		val file = File(fileUri)
+		file.delete()
 	}
 
 	override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
