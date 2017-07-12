@@ -20,7 +20,7 @@
 		app:layout_constraintTop_toTopOf="parent"
 
 		/>
-	<com.schneppd.myopenglapp.OpenGL2v3.CustomGLSurfaceView
+	<com.schneppd.myopenglapp.OpenGl2v3.CustomGLSurfaceView
 		android:id="@+id/svUserModel"
 		android:layout_width="0dp"
 		android:layout_height="0dp"

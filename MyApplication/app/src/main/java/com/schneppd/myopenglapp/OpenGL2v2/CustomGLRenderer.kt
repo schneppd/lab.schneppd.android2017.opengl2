@@ -4,7 +4,6 @@ import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.os.SystemClock
-import android.util.Log
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -53,9 +52,9 @@ class CustomGLRenderer : GLSurfaceView.Renderer{
     var shaderMatrix = FloatArray(16)
 
     //element to draw
-    lateinit var triangle1Verticies:FloatBuffer
-    lateinit var triangle2Verticies:FloatBuffer
-    lateinit var triangle3Verticies:FloatBuffer
+    var triangle1Vertices:FloatBuffer
+    var triangle2Vertices:FloatBuffer
+    var triangle3Vertices:FloatBuffer
 
     //GL handles
     var shaderHandle = 0
@@ -88,9 +87,9 @@ class CustomGLRenderer : GLSurfaceView.Renderer{
                 0.0f, 0.559016994f, 0.0f,
                 0.0f, 0.0f, 0.0f, 1.0f
         )
-        triangle1Verticies = initBuffer(triangle1VerticesData)
-        triangle2Verticies = initBuffer(triangle2VerticesData)
-        triangle3Verticies = initBuffer(triangle3VerticesData)
+        triangle1Vertices = initBuffer(triangle1VerticesData)
+        triangle2Vertices = initBuffer(triangle2VerticesData)
+        triangle3Vertices = initBuffer(triangle3VerticesData)
 
     }
 
@@ -185,21 +184,21 @@ class CustomGLRenderer : GLSurfaceView.Renderer{
         // Draw the triangle facing straight on.
         Matrix.setIdentityM(modelMatrix, 0)
         Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0.0f, 0.0f, 1.0f)
-        drawTriangle(triangle1Verticies)
+        drawTriangle(triangle1Vertices)
 
         // Draw one translated a bit down and rotated to be flat on the ground.
         Matrix.setIdentityM(modelMatrix, 0)
         Matrix.translateM(modelMatrix, 0, 0.0f, -1.0f, 0.0f)
         Matrix.rotateM(modelMatrix, 0, 90.0f, 1.0f, 0.0f, 0.0f)
         Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0.0f, 0.0f, 1.0f)
-        drawTriangle(triangle1Verticies)
+        drawTriangle(triangle1Vertices)
 
         // Draw one translated a bit to the right and rotated to be facing to the left.
         Matrix.setIdentityM(modelMatrix, 0)
         Matrix.translateM(modelMatrix, 0, 1.0f, 0.0f, 0.0f)
         Matrix.rotateM(modelMatrix, 0, 90.0f, 0.0f, 1.0f, 0.0f)
         Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0.0f, 0.0f, 1.0f)
-        drawTriangle(triangle1Verticies)
+        drawTriangle(triangle1Vertices)
     }
 
     override fun onSurfaceChanged(p0: GL10, width: Int, height: Int) {

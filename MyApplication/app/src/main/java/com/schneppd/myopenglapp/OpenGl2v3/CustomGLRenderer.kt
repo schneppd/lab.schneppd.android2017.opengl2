@@ -17,7 +17,6 @@ import javax.microedition.khronos.opengles.GL10
 class CustomGLRenderer : GLSurfaceView.Renderer{
 	companion object Static {
 		val platformBytesPerFloat = 4
-		val strideBytes = platformBytesPerFloat * 7
 		val positionDataSize = 3
 		val colorDataSize = 4
 		val normalDataSize = 3
@@ -30,7 +29,6 @@ class CustomGLRenderer : GLSurfaceView.Renderer{
 			attribute vec4 a_Color;
 			attribute vec3 a_Normal;
 			varying vec4 v_Color;
-
             void main() {
 				vec3 modelViewVertex = vec3(u_MVMatrix * a_Position);
 				vec3 modelViewNormal = vec3(u_MVMatrix * vec4(a_Normal, 0.0));
@@ -76,9 +74,9 @@ class CustomGLRenderer : GLSurfaceView.Renderer{
 	var lightMatrix = FloatArray(16)
 
 	//element to draw
-	lateinit var cubePositions: FloatBuffer
-	lateinit var cubeColors: FloatBuffer
-	lateinit var cubeNormals: FloatBuffer
+	var cubePositions: FloatBuffer
+	var cubeColors: FloatBuffer
+	var cubeNormals: FloatBuffer
 
 	//GL handles
 	var mVPMatrixHandle = 0
@@ -251,7 +249,7 @@ class CustomGLRenderer : GLSurfaceView.Renderer{
 
 	}
 
-	protected fun initBuffer(verticesData:FloatArray): FloatBuffer {
+	private fun initBuffer(verticesData:FloatArray): FloatBuffer {
 		val buffer = ByteBuffer.allocateDirect(verticesData.size * platformBytesPerFloat).order(ByteOrder.nativeOrder()).asFloatBuffer()
 		buffer.put(verticesData).position(0)
 		return buffer
@@ -343,26 +341,51 @@ class CustomGLRenderer : GLSurfaceView.Renderer{
 		GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT or GLES20.GL_COLOR_BUFFER_BIT)
 
 		val time = SystemClock.uptimeMillis() % 10000L
-		val angleInDegrees = 360.0f / 10000.0f * time.toInt()
+		val angleInDegrees = (360.0f / 10000.0f) * time.toInt()
 
-		// Draw the triangle facing straight on.
-		Matrix.setIdentityM(modelMatrix, 0)
-		Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0.0f, 0.0f, 1.0f)
-		drawTriangle(triangle1Verticies)
+		GLES20.glUseProgram(perVertexProgramHandle)
 
-		// Draw one translated a bit down and rotated to be flat on the ground.
-		Matrix.setIdentityM(modelMatrix, 0)
-		Matrix.translateM(modelMatrix, 0, 0.0f, -1.0f, 0.0f)
-		Matrix.rotateM(modelMatrix, 0, 90.0f, 1.0f, 0.0f, 0.0f)
-		Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0.0f, 0.0f, 1.0f)
-		drawTriangle(triangle1Verticies)
+		mVPMatrixHandle = GLES20.glGetUniformLocation(perVertexProgramHandle, "u_MVPMatrix")
+		mVMatrixHandle = GLES20.glGetUniformLocation(perVertexProgramHandle, "u_MVMatrix")
+		lightHandle = GLES20.glGetUniformLocation(perVertexProgramHandle, "u_LightPos")
+		positionHandle = GLES20.glGetAttribLocation(perVertexProgramHandle, "a_Position")
+		colorHandle = GLES20.glGetAttribLocation(perVertexProgramHandle, "a_Color")
+		normalHandle = GLES20.glGetAttribLocation(perVertexProgramHandle, "a_Normal")
 
-		// Draw one translated a bit to the right and rotated to be facing to the left.
+		Matrix.setIdentityM(lightMatrix, 0)
+		Matrix.translateM(lightMatrix, 0, 0.0f, 0.0f, -5.0f)
+		Matrix.rotateM(lightMatrix, 0, angleInDegrees, 0.0f, 1.0f, 0.0f)
+		Matrix.translateM(lightMatrix, 0, 0.0f, 0.0f, 2.0f)
+
+		Matrix.multiplyMV(lightPosInWorldSpace, 0, lightMatrix, 0, lightPosInModelSpace, 0)
+		Matrix.multiplyMV(lightPosInEyeSpace, 0, viewMatrix, 0, lightPosInWorldSpace, 0)
+
 		Matrix.setIdentityM(modelMatrix, 0)
-		Matrix.translateM(modelMatrix, 0, 1.0f, 0.0f, 0.0f)
-		Matrix.rotateM(modelMatrix, 0, 90.0f, 0.0f, 1.0f, 0.0f)
+		Matrix.translateM(modelMatrix, 0, 4.0f, 0.0f, -7.0f)
+		Matrix.rotateM(modelMatrix, 0, angleInDegrees, 1.0f, 0.0f, 0.0f)
+		drawCube()
+
+		Matrix.setIdentityM(modelMatrix, 0)
+		Matrix.translateM(modelMatrix, 0, -4.0f, 0.0f, -7.0f)
+		Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0.0f, 1.0f, 0.0f)
+		drawCube()
+
+		Matrix.setIdentityM(modelMatrix, 0)
+		Matrix.translateM(modelMatrix, 0, 0.0f, 4.0f, -7.0f)
 		Matrix.rotateM(modelMatrix, 0, angleInDegrees, 0.0f, 0.0f, 1.0f)
-		drawTriangle(triangle1Verticies)
+		drawCube()
+
+		Matrix.setIdentityM(modelMatrix, 0)
+		Matrix.translateM(modelMatrix, 0, 0.0f, -4.0f, -7.0f)
+		drawCube()
+
+		Matrix.setIdentityM(modelMatrix, 0)
+		Matrix.translateM(modelMatrix, 0, 0.0f, 0.0f, -5.0f)
+		Matrix.rotateM(modelMatrix, 0, angleInDegrees, 1.0f, 1.0f, 0.0f)
+		drawCube()
+
+		GLES20.glUseProgram(pointProgramHandle)
+		drawLight()
 	}
 
 	override fun onSurfaceChanged(p0: GL10, width: Int, height: Int) {
@@ -379,30 +402,42 @@ class CustomGLRenderer : GLSurfaceView.Renderer{
 		Matrix.frustumM(projectionMatrix, 0, left, right, bottom, top, near, far)
 	}
 
-	private fun drawTriangle(triangle: FloatBuffer){
-		triangle.position(positionOffset)
-		GLES20.glVertexAttribPointer(positionHandle, positionDataSize, GLES20.GL_FLOAT, false, strideBytes, triangle)
-
+	private fun drawCube(){
+		cubePositions.position(0)
+		GLES20.glVertexAttribPointer(positionHandle, positionDataSize, GLES20.GL_FLOAT, false, 0, cubePositions)
 		GLES20.glEnableVertexAttribArray(positionHandle)
 
-		// Pass in the color information
-		triangle.position(colorOffset)
-		GLES20.glVertexAttribPointer(colorHandle, colorDataSize, GLES20.GL_FLOAT, false,
-				strideBytes, triangle)
-
+		cubeColors.position(0)
+		GLES20.glVertexAttribPointer(colorHandle, colorDataSize, GLES20.GL_FLOAT, false, 0, cubeColors)
 		GLES20.glEnableVertexAttribArray(colorHandle)
 
-		// This multiplies the view matrix by the model matrix, and stores the result in the MVP matrix
-		// (which currently contains model * view).
+		cubeNormals.position(0)
+		GLES20.glVertexAttribPointer(normalHandle, normalDataSize, GLES20.GL_FLOAT, false, 0, cubeNormals)
+		GLES20.glEnableVertexAttribArray(normalHandle)
+
 		Matrix.multiplyMM(shaderMatrix, 0, viewMatrix, 0, modelMatrix, 0)
+		GLES20.glUniformMatrix4fv(mVMatrixHandle, 1, false, shaderMatrix, 0)
 
-		// This multiplies the modelview matrix by the projection matrix, and stores the result in the MVP matrix
-		// (which now contains model * view * projection).
 		Matrix.multiplyMM(shaderMatrix, 0, projectionMatrix, 0, shaderMatrix, 0)
+		GLES20.glUniformMatrix4fv(mVMatrixHandle, 1, false, shaderMatrix, 0)
 
-		GLES20.glUniformMatrix4fv(shaderHandle, 1, false, shaderMatrix, 0)
-		GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 3)
+		GLES20.glUniform3f(lightHandle, lightPosInEyeSpace[0], lightPosInEyeSpace[1], lightPosInEyeSpace[2])
+
+		GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 36)
 	}
 
+	private fun drawLight(){
+		var pointMVPMatrixHandle = GLES20.glGetUniformLocation(pointProgramHandle, "u_MVPMatrix")
+		var pointPositionHandle = GLES20.glGetAttribLocation(pointProgramHandle, "a_Position")
+
+		GLES20.glVertexAttrib3f(pointPositionHandle, lightPosInModelSpace[0], lightPosInModelSpace[1], lightPosInModelSpace[2])
+		GLES20.glDisableVertexAttribArray(pointPositionHandle)
+
+		Matrix.multiplyMM(shaderMatrix, 0, viewMatrix, 0, lightMatrix, 0)
+		Matrix.multiplyMM(shaderMatrix, 0, projectionMatrix, 0, shaderMatrix, 0)
+		GLES20.glUniformMatrix4fv(pointMVPMatrixHandle, 1, false, shaderMatrix, 0)
+
+		GLES20.glDrawArrays(GLES20.GL_POINTS, 0, 1)
+	}
 
 }
