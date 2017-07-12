@@ -1,4 +1,4 @@
-package com.schneppd.myopenglapp.OpenGL2v2
+package com.schneppd.myopenglapp.OpenGl2v2
 
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView

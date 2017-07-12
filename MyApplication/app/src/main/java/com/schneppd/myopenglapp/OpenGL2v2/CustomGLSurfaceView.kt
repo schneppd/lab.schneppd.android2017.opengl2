@@ -1,11 +1,10 @@
-package com.schneppd.myopenglapp.OpenGL2v2
+package com.schneppd.myopenglapp.OpenGl2v2
 
 import android.app.ActivityManager
 import android.content.Context
 import android.graphics.PixelFormat
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
-import android.view.MotionEvent
 
 /**
  * Created by david.schnepp on 11/07/2017.

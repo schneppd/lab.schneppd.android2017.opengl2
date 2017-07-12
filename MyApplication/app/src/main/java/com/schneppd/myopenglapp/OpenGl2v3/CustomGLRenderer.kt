@@ -87,7 +87,7 @@ class CustomGLRenderer : GLSurfaceView.Renderer{
 	var normalHandle = 0
 
 	//light data
-	val lightPosInModelSpace = floatArrayOf(0.0f, 0.0f, 0.0f, 1.0f)
+	var lightPosInModelSpace = floatArrayOf(0.0f, 0.0f, 0.0f, 1.0f)
 	var lightPosInWorldSpace = FloatArray(4)
 	var lightPosInEyeSpace = FloatArray(4)
 
@@ -250,7 +250,7 @@ class CustomGLRenderer : GLSurfaceView.Renderer{
 	}
 
 	private fun initBuffer(verticesData:FloatArray): FloatBuffer {
-		val buffer = ByteBuffer.allocateDirect(verticesData.size * platformBytesPerFloat).order(ByteOrder.nativeOrder()).asFloatBuffer()
+		var buffer = ByteBuffer.allocateDirect(verticesData.size * platformBytesPerFloat).order(ByteOrder.nativeOrder()).asFloatBuffer()
 		buffer.put(verticesData).position(0)
 		return buffer
 	}
@@ -314,12 +314,9 @@ class CustomGLRenderer : GLSurfaceView.Renderer{
 			GLES20.glAttachShader(programHandle, vertexShaderHandle)
 			GLES20.glAttachShader(programHandle, fragmentShaderHandle)
 
-			for(attribute in bindAttributes.withIndex()){
-				GLES20.glBindAttribLocation(programHandle, attribute.index, attribute.value)
+			for((index, value) in bindAttributes.withIndex()){
+				GLES20.glBindAttribLocation(programHandle, index, value)
 			}
-
-			GLES20.glBindAttribLocation(programHandle, 0, "a_Position")
-			GLES20.glBindAttribLocation(programHandle, 1, "a_Color")
 
 			GLES20.glLinkProgram(programHandle)
 

@@ -109,14 +109,8 @@ class MainActivity : AppCompatActivity() {
 
 	override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
 		if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-			/*
-			val extras = data!!.extras
-			val rawImageBitmap = extras.get("data") as Bitmap
-			val imageBitmap = Bitmap.createScaledBitmap(rawImageBitmap, ivUserPicture.width, ivUserPicture.height, true)
-			ivUserPicture.imageBitmap = imageBitmap
-			*/
 			val fileUri = "file://" + currentPhotoPath
-			Picasso.with(this).load(fileUri).resize(ivUserPicture.width, ivUserPicture.height).centerCrop().into(ivUserPicture)
+			Picasso.with(this).load(fileUri).resize(ivUserPicture.width, ivUserPicture.height).into(ivUserPicture)
 		}
 		super.onActivityResult(requestCode, resultCode, data)
 	}

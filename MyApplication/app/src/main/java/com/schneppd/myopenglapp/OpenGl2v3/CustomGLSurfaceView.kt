@@ -11,7 +11,7 @@ import android.util.AttributeSet
  */
 class CustomGLSurfaceView(context: Context, attrs: AttributeSet) : GLSurfaceView(context, attrs){
 
-	val mRenderer: CustomGLRenderer = CustomGLRenderer()
+	val mRenderer = CustomGLRenderer3()
 
 	init {
 		//test if opengl2 supported
