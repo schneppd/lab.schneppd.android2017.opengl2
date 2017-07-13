@@ -37,8 +37,12 @@ dependencies {
     compile "org.jetbrains.anko:anko-sqlite:$anko_version"
     compile 'org.rajawali3d:rajawali:1.1.777@aar'
     compile 'com.squareup.picasso:picasso:2.5.2'
+    compile 'it.sephiroth.android.library.uigestures:uigesture-recognizer:1.0.0-r1-SNAPSHOT'
+    compile 'com.ryanharter.android-gesture-detectors:library:0.0.4'
 
 }
 repositories {
+    jcenter()
     mavenCentral()
+    maven { url uri("https://oss.sonatype.org/content/repositories/snapshots") }
 }
