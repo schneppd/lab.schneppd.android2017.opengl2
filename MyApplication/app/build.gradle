@@ -40,6 +40,8 @@ dependencies {
     compile 'it.sephiroth.android.library.uigestures:uigesture-recognizer:1.0.0-r1-SNAPSHOT'
     compile 'com.ryanharter.android-gesture-detectors:library:0.0.4'
 
+
+
 }
 repositories {
     jcenter()

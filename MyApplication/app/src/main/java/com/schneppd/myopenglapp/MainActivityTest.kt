@@ -27,6 +27,7 @@ import android.R.attr.y
 import android.R.attr.x
 import android.R.attr.mode
 import android.graphics.Matrix
+import android.graphics.Point
 import android.util.FloatMath
 
 
@@ -67,6 +68,7 @@ class MainActivityTest : AppCompatActivity(), View.OnTouchListener
         val toolbar = findViewById(R.id.toolbar) as Toolbar
         setSupportActionBar(toolbar)
 
+        ivUserPicture.setOnTouchListener(this)
         svUserModel.setOnTouchListener(this)
 
         /*
@@ -197,15 +199,18 @@ class MainActivityTest : AppCompatActivity(), View.OnTouchListener
                 val dy = event.y - start.y
                 matrix.postTranslate(dx, dy)
                 Log.d(DEBUG_TAG, "you drag ${dx}  ${dy}")
+                val newPos = PointF(event.x, event.y)
+                svUserModel.moveCurrentModel(newPos)
             } else if (mode == ZOOM) {
                 val newDist = spacing(event)
                 if (newDist > 10f && event.pointerCount <=2) {
                     matrix.set(savedMatrix)
                     val scale = newDist / oldDist
                     matrix.postScale(scale.toFloat(), scale.toFloat(), mid.x, mid.y)
+                    svUserModel.scaleCurrentModel(scale)
                     Log.d(DEBUG_TAG, "you zoom ${scale}")
                 }
-                if (lastEvent != null && event.pointerCount == 3) {
+                if (lastEvent != null && event.pointerCount >= 3) {
                     newRot = rotation(event)
                     val r = newRot - d
                     val values = FloatArray(9)
@@ -216,6 +221,7 @@ class MainActivityTest : AppCompatActivity(), View.OnTouchListener
                     val xc = view.getWidth() / 2 * sx
                     val yc = view.getHeight() / 2 * sx
                     matrix.postRotate(r.toFloat(), tx + xc, ty + yc)
+                    svUserModel.rotateCurrentModel(r)
                     Log.d(DEBUG_TAG, "you rotate  ${r}")
                 }
             }
