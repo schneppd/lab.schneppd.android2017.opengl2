@@ -15,7 +15,6 @@ class MainActivityTest5 : MainActivityBase()
         //, GestureDetector.OnGestureListener
         //, GestureDetector.OnDoubleTapListener
        // , ScaleGestureDetector.OnScaleGestureListener
-        , View.OnTouchListener
 {
     /*
     var isScaleMotionDetected = false
@@ -32,9 +31,12 @@ class MainActivityTest5 : MainActivityBase()
         //scaleDetector = ScaleGestureDetector(this, this)
 
         //ivUserPicture.setOnTouchListener { view, motionEvent -> this.onTouch(view, motionEvent) }
-        ivUserPicture.setOnTouchListener(this)
+        //ivUserPicture.setOnTouchListener(this)
+        //ivUserPicture.setOnTouchListener(this)
     }
 
+
+    /*
     var isTouchInProgress = false
     override fun onTouch(v:View, event: MotionEvent):Boolean {
         when(event.action and MotionEvent.ACTION_MASK){
@@ -58,23 +60,11 @@ class MainActivityTest5 : MainActivityBase()
             }
             MotionEvent.ACTION_MOVE -> {
                 val b = 1
-                /*
-                val x = event.x
-                val y = event.y
-
-                val widthSurface = ivUserPicture.width
-                val heightSurface = ivUserPicture.height
-
-                val centerX = widthSurface / 2
-                val centerY = heightSurface / 2
-
-                val distX = if(x > centerX) x-centerX else x
-                val distY = if(y > centerY) y-centerY else y
-                */
             }
         }
         return true
     }
+    */
 /*
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -84,28 +74,7 @@ class MainActivityTest5 : MainActivityBase()
 
     }
 */
-    fun isDragMotion(event: MotionEvent) : Boolean{
-        return event.pointerCount == 1
-    }
 
-    fun onDrag(event: MotionEvent) : Boolean{
-        when(event.action){
-            MotionEvent.ACTION_MOVE -> {
-                val x = event.x
-                val y = event.y
-
-                val widthSurface = ivUserPicture.width
-                val heightSurface = ivUserPicture.height
-
-                val centerX = widthSurface / 2
-                val centerY = heightSurface / 2
-
-                val distX = if(x > centerX) x-centerX else x
-                val distY = if(y > centerY) y-centerY else y
-            }
-        }
-        return true
-    }
 
     /*
     override fun onDown(event: MotionEvent):Boolean{

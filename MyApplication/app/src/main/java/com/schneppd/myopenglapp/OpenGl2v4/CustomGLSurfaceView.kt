@@ -19,7 +19,7 @@ import org.rajawali3d.view.SurfaceView
  * Created by david.schnepp on 12/07/2017.
  */
 
-class CustomGLSurfaceView(context: Context, attrs:AttributeSet) : SurfaceView(context, attrs) {
+class CustomGLSurfaceView(context: Context, attrs:AttributeSet) : SurfaceView(context, attrs), View.OnTouchListener {
 
     val renderer = CustomGLRenderer(this.context)
 
@@ -75,7 +75,11 @@ class CustomGLSurfaceView(context: Context, attrs:AttributeSet) : SurfaceView(co
         renderer.loadModel()
     }
 
-
+    override fun onTouch(p0: View?, p1: MotionEvent): Boolean {
+        //TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val b = p1.action
+        return true
+    }
 
 
 }
