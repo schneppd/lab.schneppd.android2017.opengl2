@@ -20,21 +20,22 @@ enum class TouchEventComposition{
     UNDECIDED, ONE_FINGER, TWO_FINGER, MULTIPLE_FINGER
 }
 
-data class MovementStep(val timeCreation:Long, val x:Int, val y:Int)
-data class MovementMatrix(val matrix:Array<MovementStep>)
+const val MAX_TOUCH_FINGER = 3
 
 class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context, attrs), View.OnTouchListener {
 
-    var touchStart:Date? = null
+
+
+    var touchStart:Long? = null
     var numberTouchFinger = 0
     var touchComposition:TouchEventComposition = TouchEventComposition.UNDECIDED
 
-    var singleFingerMovementStart:Date? = null
-    var twoFingerMovementStart:Date? = null
+    var singleFingerMovementStart:Long? = null
+    var twoFingerMovementStart:Long? = null
 
-    var gestureDragStart:Date? = null
-    var gestureRotationStart:Date? = null
-    var gestureScaleStart:Date? = null
+    var gestureDragStart:Long? = null
+    var gestureRotationStart:Long? = null
+    var gestureScaleStart:Long? = null
 
     // touchInex, (time_creation, coords)
     //manage only the last 9 movements of each 3 fingers
@@ -43,7 +44,7 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
     init {
         this.setOnTouchListener(this)
         //init matrix
-        for(i in 0..2){
+        for(i in 0..(MAX_TOUCH_FINGER - 1)){
             movementsCache.put(i, LinkedHashMap<Long, Point>())
         }
     }
@@ -111,7 +112,7 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
     }
 
     fun startTouchGesture(event:MotionEvent){
-        touchStart = Date()
+        touchStart = Date().time
         addTouchPointer(event)
         Log.d("TouchTest", "startTouchGesture *********")
     }
@@ -132,7 +133,7 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
     }
 
     fun resetTouchMatrix(){
-        for(i in 0..2){
+        for(i in 0..(MAX_TOUCH_FINGER - 1)){
             movementsCache[i].clear()
         }
     }
@@ -152,7 +153,7 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
     fun resolveTouchComposition(){
         if(numberTouchFinger == 1 && (touchComposition == TouchEventComposition.UNDECIDED || touchComposition == TouchEventComposition.TWO_FINGER)){
             val now = Date()
-            val delayValidateSingleTouchEvent = Date(touchStart!!.time + 20)
+            val delayValidateSingleTouchEvent = Date(touchStart!! + 20)
             if(now > delayValidateSingleTouchEvent)
                 touchComposition = TouchEventComposition.ONE_FINGER
         }
@@ -170,16 +171,22 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
         resolveTouchComposition()
     }
 
-    fun deleteTouchData(event:MotionEvent){
+    fun getPointerId(event:MotionEvent):Int{
         val actionIndex = event.actionIndex
         val idPointer = event.getPointerId(actionIndex)
-        movementsCache[idPointer].clear()
+        return idPointer
+    }
+
+    fun deleteTouchData(event:MotionEvent){
+        val idPointer = getPointerId(event)
+        if(idPointer < MAX_TOUCH_FINGER)
+            movementsCache[idPointer].clear()
     }
 
     fun createTouchData(event:MotionEvent){
-        val actionIndex = event.actionIndex
-        val idPointer = event.getPointerId(actionIndex)
-        movementsCache[idPointer].clear()
+        val idPointer = getPointerId(event)
+        if(idPointer < MAX_TOUCH_FINGER)
+            movementsCache[idPointer].clear()
     }
 
     fun rememberTouchMovementStep(event:MotionEvent){
@@ -187,29 +194,32 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
         val time = event.eventTime
         for(p in 0..(pointerCount-1)){
             val pointerId = event.getPointerId(p)
-            val pointerX = event.getX(p).toInt()
-            val pointerY = event.getY(p).toInt()
-            Log.d("TouchTest", "t:${time} pointer:${pointerId} x:${pointerX} y:${pointerY}")
-            val point = Point(pointerX, pointerY)
-            val matrix = movementsCache[pointerId]
+            if(pointerId < MAX_TOUCH_FINGER){
+                val pointerX = event.getX(p).toInt()
+                val pointerY = event.getY(p).toInt()
+                Log.d("TouchTest", "t:${time} pointer:${pointerId} x:${pointerX} y:${pointerY}")
+                val point = Point(pointerX, pointerY)
+                val matrix = movementsCache[pointerId]
 
-            if(matrix.size == 0){
-                //save first element
-                matrix.put(time, point)
-            }
-            else{
-                val lastPoint = matrix.values.last()
-                //test if noiseInput
-                val limitNoise = 10
-                var canRecord = false
-                if((pointerX > lastPoint.x + limitNoise) || (pointerY > lastPoint.y + limitNoise))
-                    canRecord = true
-                if(!canRecord && (pointerX < lastPoint.x - limitNoise) || (pointerY < lastPoint.y - limitNoise))
-                    canRecord = true
-
-                if(canRecord)
+                if(matrix.size == 0){
+                    //save first element
                     matrix.put(time, point)
+                }
+                else{
+                    val lastPoint = matrix.values.last()
+                    //test if noiseInput
+                    val limitNoise = 10
+                    var canRecord = false
+                    if((pointerX > lastPoint.x + limitNoise) || (pointerY > lastPoint.y + limitNoise))
+                        canRecord = true
+                    if(!canRecord && (pointerX < lastPoint.x - limitNoise) || (pointerY < lastPoint.y - limitNoise))
+                        canRecord = true
+
+                    if(canRecord)
+                        matrix.put(time, point)
+                }
             }
+
 
         }
     }
