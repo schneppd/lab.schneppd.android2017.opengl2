@@ -9,6 +9,7 @@ import android.util.SparseIntArray
 import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
+import collections.forEach
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -16,30 +17,30 @@ import kotlin.collections.HashMap
 /**
  * Created by david.schnepp on 19/07/2017.
  */
-enum class TouchEventComposition{
-    UNDECIDED, ONE_FINGER, TWO_FINGER, MULTIPLE_FINGER
-}
-
-const val MAX_TOUCH_FINGER = 3
 
 class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context, attrs), View.OnTouchListener {
+    enum class TouchEventComposition{
+        UNDECIDED, ONE_FINGER, TWO_FINGER, MULTIPLE_FINGER
+    }
 
-
+    val MAX_TOUCH_FINGER = 2
 
     var touchStart:Long? = null
     var numberTouchFinger = 0
     var touchComposition:TouchEventComposition = TouchEventComposition.UNDECIDED
 
-    var singleFingerMovementStart:Long? = null
-    var twoFingerMovementStart:Long? = null
+    var startGestureInformations:SparseArray<LinkedHashMap<Long, Point>>? = null
+    var gestureOneFingerDragStart:Long? = null
+    var gestureTwoFingerRotationStart:Long? = null
+    var gestureTwoFingerScaleStart:Long? = null
 
-    var gestureDragStart:Long? = null
-    var gestureRotationStart:Long? = null
-    var gestureScaleStart:Long? = null
+    var lastSingleFingerGestureStop:Long? = null
+    var lastTwhoFingerGestureStop:Long? = null
+
 
     // touchInex, (time_creation, coords)
-    //manage only the last 9 movements of each 3 fingers
-    val movementsCache = SparseArray<LinkedHashMap<Long, Point>>(3)
+    //manage only the last 9 movements of each 2 fingers
+    val movementsCache = SparseArray<LinkedHashMap<Long, Point>>(MAX_TOUCH_FINGER)
 
     init {
         this.setOnTouchListener(this)
@@ -49,6 +50,7 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
         }
     }
 
+    ///process touch
     override fun onTouch(p0: View?, p1: MotionEvent): Boolean {
         //TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         when(p1.action and MotionEvent.ACTION_MASK){
@@ -60,13 +62,34 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
             MotionEvent.ACTION_POINTER_UP -> removeTouchPointerToGesture(p1)
             else -> unknownTouchGestureStep(p1)
         }
-        val b = p1.action
         return true
     }
 
+    ///process start / end
+    fun startTouchGesture(event:MotionEvent){
+        touchStart = Date().time
+        addTouchPointer(event)
+        Log.d("TouchTest", "startTouchGesture *********")
+    }
+
+    fun cancelTouchGesture(event:MotionEvent){
+        touchStart = null
+        numberTouchFinger = 0
+        touchComposition = TouchEventComposition.UNDECIDED
+        resetTouchMatrix()
+
+        Log.d("TouchTest", "cancelTouchGesture *********")
+    }
+
+    fun endTouchGesture(event:MotionEvent){
+        touchStart = null
+        numberTouchFinger = 0
+        resetTouchMatrix()
+        Log.d("TouchTest", "endTouchGesture *********")
+    }
+
+    ///process steps in touch lifecycle
     fun addTouchPointerToGesture(event:MotionEvent){
-        val actionIndex = event.actionIndex
-        val idPointer = event.getPointerId(actionIndex)
         addTouchPointer(event)
         Log.d("TouchTest", "addTouchPointerToGesture +++++++++")
     }
@@ -108,48 +131,33 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
             rememberTouchMovementStep(event)
         }
         Log.d("TouchTest", "end pointerHistory: ----------")
-        resolveGesture()
+        resolveGesture(event)
     }
 
-    fun startTouchGesture(event:MotionEvent){
-        touchStart = Date().time
-        addTouchPointer(event)
-        Log.d("TouchTest", "startTouchGesture *********")
-    }
 
-    fun cancelTouchGesture(event:MotionEvent){
-        touchStart = null
-        numberTouchFinger = 0
-        touchComposition = TouchEventComposition.UNDECIDED
-        resetTouchMatrix()
-        Log.d("TouchTest", "cancelTouchGesture *********")
-    }
 
-    fun endTouchGesture(event:MotionEvent){
-        touchStart = null
-        numberTouchFinger = 0
-        resetTouchMatrix()
-        Log.d("TouchTest", "endTouchGesture *********")
-    }
-
+    ///utlity functions
+    //
     fun resetTouchMatrix(){
         for(i in 0..(MAX_TOUCH_FINGER - 1)){
             movementsCache[i].clear()
         }
     }
-
-    fun stopTouchGesture(event:MotionEvent){
-        touchStart = null
-        numberTouchFinger = 0
-        Log.d("TouchTest", "stopTouchGesture *********")
-    }
-
     fun addTouchPointer(event:MotionEvent){
         numberTouchFinger += 1
         createTouchData(event)
+
+        resolveTouchComposition()
+    }
+    fun removeTouchPointer(event:MotionEvent){
+        if(numberTouchFinger > 1)
+            numberTouchFinger -= 1
+        deleteTouchData(event)
+
         resolveTouchComposition()
     }
 
+    //try to get number of finger used in touchGesture
     fun resolveTouchComposition(){
         if(numberTouchFinger == 1 && (touchComposition == TouchEventComposition.UNDECIDED || touchComposition == TouchEventComposition.TWO_FINGER)){
             val now = Date()
@@ -164,12 +172,7 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
             touchComposition = TouchEventComposition.MULTIPLE_FINGER
     }
 
-    fun removeTouchPointer(event:MotionEvent){
-        if(numberTouchFinger > 1)
-            numberTouchFinger -= 1
-        deleteTouchData(event)
-        resolveTouchComposition()
-    }
+
 
     fun getPointerId(event:MotionEvent):Int{
         val actionIndex = event.actionIndex
@@ -224,41 +227,86 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
         }
     }
 
-    fun resolveGesture(){
+
+
+    ///identify gesture
+    fun resolveGesture(event:MotionEvent){
         Log.d("TouchTest", "resolveGesture *********")
+
+        if(touchComposition == TouchEventComposition.ONE_FINGER){
+            //drag only option
+            gestureOneFingerDragStart?.let{
+                onDrag(event)
+            } ?:run{
+                gestureOneFingerDragStart = Date().time // record start of drag
+                onDrag(event)
+            }
+        }
+        else if(touchComposition == TouchEventComposition.TWO_FINGER || touchComposition == TouchEventComposition.MULTIPLE_FINGER){
+            gestureOneFingerDragStart?.let{
+                onDragStop(event)
+            }
+        }
+    }
+
+    fun clearCacheUpTo(time:Long){
+        movementsCache.forEach { fingerIndex, cacheFingerMovement -> run{
+            for(key in cacheFingerMovement.keys){
+                if(key <= time) cacheFingerMovement.remove(key)
+            }
+        } }
+
+    }
+
+    fun onDragStart(event:MotionEvent){
+        val time = event.eventTime
+        val startPoint = Point(event.getX(0).toInt(), event.getY(0).toInt())
+        val startInfos = LinkedHashMap<Long, Point>()
+        startInfos.put(time, startPoint)
+
+        val recordedInfos = SparseArray<LinkedHashMap<Long, Point>>(1)
+        recordedInfos.put(0, startInfos)
+
+        clearCacheUpTo(time)
+
+        startGestureInformations = recordedInfos
+        Log.d("TouchTest", "onDragStart t:${time} x:${startPoint.x} y:${startPoint.y}")
+    }
+
+    fun onDragStop(event:MotionEvent){
+        startGestureInformations = null
+        gestureOneFingerDragStart = null
+        lastSingleFingerGestureStop = Date().time
+
+        Log.d("TouchTest", "onDragStop t:${event.eventTime}")
+    }
+
+    fun onDrag(event:MotionEvent){
+        Log.d("TouchTest", "onDrag t:${event.eventTime} x:${event.getX(0)} y:${event.getY(0)}")
     }
 
 
-    fun onDragStart(){
-
-    }
-
-    fun onDragStop(){
-
-    }
-
-    fun onDrag(){
-
-    }
 
     fun onRotateStart(){
 
     }
 
     fun onRotateStop(){
-
+        startGestureInformations = null
     }
 
     fun onRotate(){
-
     }
+
+
+
 
     fun onScaleStart(){
 
     }
 
     fun onScaleStop(){
-
+        startGestureInformations = null
     }
 
     fun onScale(){
