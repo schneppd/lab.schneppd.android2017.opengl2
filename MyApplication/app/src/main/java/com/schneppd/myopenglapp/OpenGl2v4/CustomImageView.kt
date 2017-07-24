@@ -23,7 +23,7 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
     }
 
     val MAX_TOUCH_FINGER = 2
-    val GESTURE_NOISE_POSITION_LIMIT = 10 // pixel
+    val GESTURE_NOISE_POSITION_LIMIT = 3 // pixel
     val GESTURE_NOISE_DELAY_LIMIT = 300 // millisec
 
     var touchStart:Long? = null
@@ -45,9 +45,9 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
     // touchInex, (time_creation, coords)
     //manage only the last 9 movements of each 2 fingers
     //val movementsCache = SparseArray<LinkedHashMap<Long, Point>>(MAX_TOUCH_FINGER)
-    val movementsCache = Array(3 , {i -> Array(9, {j -> longArrayOf(0L, 0L, 0L)})})
+    val movementsCache = Array<MotionEvent?>(5 , {i -> null })
     var movementsCacheIndex = 0
-    var startGestureInformations = Array(3 , {i -> longArrayOf(0L, 0L, 0L)})
+    var startGestureInformations:MotionEvent? = null
 
     init {
         this.setOnTouchListener(this)
@@ -92,6 +92,7 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
         touchComposition = TouchEventComposition.UNDECIDED
         dragGestureCooldown = 0
         lastSingleFingerGestureStop = null
+		startGestureInformations = null
         //clear gestures
 
         if(gestureOneFingerDragStartIndex > -1) onDragStop(event)
@@ -193,48 +194,43 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
 
 
     fun rememberTouchMovementStep(event:MotionEvent){
-        val pointerCount = event.pointerCount
-        val time = event.eventTime
         var hasAddedPointer = false
-        for(p in 0..(pointerCount-1)){
-            val pointerId = event.getPointerId(p)
-            if(pointerId < MAX_TOUCH_FINGER){
-                val pointerX = event.getX(p).toLong()
-                val pointerY = event.getY(p).toLong()
-                Log.d("TouchTest", "t:${time} pointer:${pointerId} x:${pointerX} y:${pointerY}")
-                val matrix = movementsCache[pointerId]
 
-                if(movementsCacheIndex == 0){
-                    //save first element
-                    matrix[movementsCacheIndex][0] = time
-                    matrix[movementsCacheIndex][1] = pointerX
-                    matrix[movementsCacheIndex][2] = pointerY
-                    hasAddedPointer = true
-                }
-                else{
-                    if(movementsCacheIndex == 9)
-                        return //should not occur
+		val pointerCount = event.pointerCount
+		if(movementsCacheIndex == 0){
+			//save first element
+			movementsCache[movementsCacheIndex] = event
+			hasAddedPointer = true
+		}
+		else{
+			if(movementsCacheIndex == 9)
+				return //should not occur
+			var hasOneFingerChanged = true
+			for(finger in 0..(pointerCount-1)){
+				val pointerId = event.getPointerId(finger)
+				val pointerX = event.getX(finger)
+				val pointerY = event.getY(finger)
 
-                    val lastPointX = matrix[movementsCacheIndex][1]
-                    val lastPointY = matrix[movementsCacheIndex][2]
-                    //test if noiseInput
-                    var canRecord = false
-                    if((pointerX > lastPointX + GESTURE_NOISE_POSITION_LIMIT) || (pointerY > lastPointY + GESTURE_NOISE_POSITION_LIMIT))
-                        canRecord = true
-                    if(!canRecord && (pointerX < lastPointX - GESTURE_NOISE_POSITION_LIMIT) || (pointerY < lastPointY - GESTURE_NOISE_POSITION_LIMIT))
-                        canRecord = true
+				val lastMotionEvent = movementsCache[movementsCacheIndex-1]!!
+				val lastPointX = lastMotionEvent.getX(finger)
+				val lastPointY = lastMotionEvent.getY(finger)
 
-                    if(canRecord){
-                        matrix[movementsCacheIndex][0] = time
-                        matrix[movementsCacheIndex][1] = pointerX
-                        matrix[movementsCacheIndex][2] = pointerY
-                        hasAddedPointer = true
-                    }
-                }
-            }
+				//test if noiseInput
+				/*
+				var canRecord = false
+				if((pointerX > lastPointX + GESTURE_NOISE_POSITION_LIMIT) || (pointerY > lastPointY + GESTURE_NOISE_POSITION_LIMIT))
+					hasOneFingerChanged = true
+				else if(!canRecord && (pointerX < lastPointX - GESTURE_NOISE_POSITION_LIMIT) || (pointerY < lastPointY - GESTURE_NOISE_POSITION_LIMIT))
+					hasOneFingerChanged = true
+					*/
+			}
+			if(hasOneFingerChanged){
+				movementsCache[movementsCacheIndex] = event
+				hasAddedPointer = true
+			}
+		}
 
 
-        }
         if(hasAddedPointer)
             movementsCacheIndex++
     }
@@ -254,6 +250,7 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
         }
         else if(touchComposition == TouchEventComposition.TWO_FINGER || touchComposition == TouchEventComposition.MULTIPLE_FINGER){
             endOngoingOneFingerGestures(event)
+
             if(isRotating(event)){
                 gestureTwoFingerScaleStart?.let{
                     onScale(event)
@@ -263,6 +260,7 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
                 else
                     onRotate(event)
             }
+			/*
             else if(isScalling(event)){
                 gestureTwoFingerRotationStart?.let{
                     onRotateStop(event)
@@ -275,6 +273,8 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
             else{
                 Log.d("TouchTest", "no gesture detected")
             }
+            */
+
 
         }
     }
@@ -288,9 +288,11 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
         gestureTwoFingerRotationStart?.let{
             onRotateStop(event)
         }
+		/*
         gestureTwoFingerScaleStart?.let{
             onScale(event)
         }
+        */
     }
 
     fun isDragging(event:MotionEvent):Boolean{
@@ -301,41 +303,44 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
     }
 
     fun isRotating(event:MotionEvent):Boolean{
-        if(movementsCacheIndex == 4){//need 3 moves to tell if rotation
-            var lastGestureInformations = Array(2 , {i -> Array((movementsCacheIndex - 1), { j -> FingerMovement.NOT_ANALYSED})})
-            var lastElement:LongArray? = null
-            val fingerSize = event.size
-            val limitWigle = 30L
-            val movementsCacheIndexStart = movementsCacheIndex - 1
-            val movementsCacheIndexCountStart = movementsCacheIndexStart - 1
-            for (finger in 1 downTo 0) {
-                val initialX = movementsCache[finger][movementsCacheIndexStart][1]
-                val initialY = movementsCache[finger][movementsCacheIndexStart][2]
+        if(movementsCacheIndex == 4) {//need 3 moves to tell if rotation
+			var lastGestureInformations = Array(2, { i -> Array((movementsCacheIndex - 1), { j -> FingerMovement.NOT_ANALYSED }) })
+			var lastElement: LongArray? = null
+			val fingerSize = event.size
+			val limitWigle = 50.0f
+			val movementsCacheIndexStart = movementsCacheIndex - 1
+			val movementsCacheIndexCountStart = movementsCacheIndexStart - 1
+			val initialMotionEvent = movementsCache[0]!!
 
-                for (indexMovement in movementsCacheIndexCountStart downTo 0) {
-                    if (indexMovement < movementsCacheIndex) {
+			val pointerCount = event.pointerCount
+			for(fingerIndex in 0..(pointerCount-1)) {
+				for (indexMovement in 1..(movementsCacheIndex-1)) {
+					val previousMotionEvent = movementsCache[indexMovement - 1]!!
+					val currentMotionEvent = movementsCache[indexMovement]!!
 
-                        val previousX = movementsCache[finger][indexMovement + 1][1]
-                        val previousY = movementsCache[finger][indexMovement + 1][2]
+					val initialX = initialMotionEvent.getX(fingerIndex)
+					val initialY = initialMotionEvent.getY(fingerIndex)
 
-                        val currentX = movementsCache[finger][indexMovement][1]
-                        val currentY = movementsCache[finger][indexMovement][2]
+					val previousX = previousMotionEvent.getX(fingerIndex)
+					val previousY = previousMotionEvent.getY(fingerIndex)
 
-                        if (previousX == currentX && previousY == currentY) {
-                            lastGestureInformations[finger][indexMovement] = FingerMovement.STATIC
-                        } else if (
-                        ((previousX >= currentX && currentX > (initialX - limitWigle)) || (previousX < currentX && currentX < (initialX + limitWigle)))
-                                && ((previousY >= currentY && currentY > (initialY - limitWigle)) || (previousY < currentY && currentY < (initialY + limitWigle)))
-                                       ) {
-                            lastGestureInformations[finger][indexMovement] = FingerMovement.STATIC_WIGLE
-                        } else {
-                            lastGestureInformations[finger][indexMovement] = FingerMovement.MOVEMENT
-                        }
+					val currentX = currentMotionEvent.getX(fingerIndex)
+					val currentY = currentMotionEvent.getY(fingerIndex)
 
-                    }
+					if (previousX == currentX && previousY == currentY) {
+						lastGestureInformations[fingerIndex][indexMovement - 1] = FingerMovement.STATIC
+					} else if (
+					((previousX >= currentX && currentX > (initialX - limitWigle)) || (previousX < currentX && currentX < (initialX + limitWigle)))
+							&& ((previousY >= currentY && currentY > (initialY - limitWigle)) || (previousY < currentY && currentY < (initialY + limitWigle)))
+								   ) {
+						lastGestureInformations[fingerIndex][indexMovement - 1] = FingerMovement.STATIC_WIGLE
+					} else {
+						lastGestureInformations[fingerIndex][indexMovement - 1] = FingerMovement.MOVEMENT
+					}
 
-                }
-            }
+				}
+			}
+
             //resolve each finger action
             //-1 unknown, 1 static all the way, 2 movement all the way
             val fingersFinalAction = arrayOf(-1, -1)
@@ -398,13 +403,13 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
         return false
     }
     fun isScalling(event:MotionEvent):Boolean{
+		/*
         if(movementsCacheIndex == 4){//need 3 moves to tell if rotation
-            var lastGestureInformations = Array(2 , {i -> Array((movementsCacheIndex - 2), { j -> FingerMovement.NOT_ANALYSED})})
-            var lastElement:LongArray? = null
-            val fingerSize = event.size
+			val movementsCacheIndexStart = movementsCacheIndex - 1 //3
+			val movementsCacheIndexCountStart = movementsCacheIndexStart - 1 //2
+            var lastGestureInformations = Array(2 , {i -> Array(movementsCacheIndexCountStart, { j -> FingerMovement.NOT_ANALYSED})})
             val limitWigle = 30L
-            val movementsCacheIndexStart = movementsCacheIndex - 1
-            val movementsCacheIndexCountStart = movementsCacheIndexStart - 1
+
             for (finger in 1 downTo 0) {
                 val initialX = movementsCache[finger][movementsCacheIndexStart][1]
                 val initialY = movementsCache[finger][movementsCacheIndexStart][2]
@@ -489,6 +494,7 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
             }
 
         }
+		*/
         return false
     }
 
@@ -503,9 +509,8 @@ class CustomImageView(context: Context, attrs: AttributeSet) : ImageView(context
         gestureOneFingerDragStartIndex = movementsCacheIndex--
         movementsCacheIndex = 0
 
-        startGestureInformations[0][0] = movementsCache[0][movementsCacheIndex][0]
-        startGestureInformations[0][1] = movementsCache[0][movementsCacheIndex][1]
-        startGestureInformations[0][2] = movementsCache[0][movementsCacheIndex][2]
+		startGestureInformations = event
+
         Log.d("TouchTest", "onDragStart t:${time} x:${startPointX} y:${startPointY}")
     }
 
