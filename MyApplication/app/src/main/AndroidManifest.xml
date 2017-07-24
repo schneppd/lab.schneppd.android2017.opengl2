@@ -12,7 +12,7 @@
 		android:hardwareAccelerated="true"
 		>
 		<activity
-			android:name=".MainActivityTest"
+			android:name=".MainActivityTest5"
 			android:label="@string/app_name"
 			android:theme="@style/AppTheme.NoActionBar"
 			android:screenOrientation="landscape"
