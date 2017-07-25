@@ -40,7 +40,7 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
         var isRotationGestureDetected = false
         var isScaleGestureDetected = false
         var isGestureConfirmed = false
-        var startUnknownMovement:MotionEvent? = null
+        var startUnknownMovement:FloatArray? = null
         var scaleCorrectionCache = FloatArray(4)
         var nbOnScaledCached = 0
         var backupMotionEvent:LinkedList<MotionEvent> = LinkedList<MotionEvent>() //used to deal with edge case on scale detected
@@ -140,9 +140,14 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
             }
         }
         else{
-            Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer ${isRotationGestureDetected} ${isScaleGestureDetected} ${isScaleListenerTriggered} ${nbOnMoveAfterOnScaleStart} ${nbOnScaleAfterOnScaleStart}")
+            Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer isRotationGestureDetected ${isRotationGestureDetected} isScaleGestureDetected ${isScaleGestureDetected} isScaleListenerTriggered ${isScaleListenerTriggered} ${nbOnMoveAfterOnScaleStart} ${nbOnScaleAfterOnScaleStart}")
             startUnknownMovement ?: run{
-                startUnknownMovement = event
+				val newPosition = FloatArray(4)
+				newPosition[0] = event.getX(0)
+				newPosition[1] = event.getY(0)
+				newPosition[2] = event.getX(1)
+				newPosition[3] = event.getY(1)
+                startUnknownMovement = newPosition
             }
             if(number2FingerMovementUnknown == 6 && !isScaleListenerTriggered) { //it's a rotation
                 number2FingerMovementUnknown = 0
@@ -171,6 +176,7 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
                 }
             }
 
+			/*
             if((isRotationGestureDetected || isScaleGestureDetected) && doesContinueCurrentGesture(event)){
                 if(isRotationGestureDetected){
                     Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer continue rotation")
@@ -189,6 +195,7 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
                     Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer switch to rotation")
                 }
             }
+            */
 
         }
 
@@ -197,21 +204,26 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
     fun doesContinueCurrentGesture(event:MotionEvent):Boolean{
         if(isRotationGestureDetected){
             val startMovement = startUnknownMovement!!
-            val xFinger0StartMovement = startMovement.getX(0)
-            val xFinger1StartMovement = startMovement.getX(1)
+            val xFinger0StartMovement = startMovement[0]
+            val xFinger1StartMovement = startMovement[2]
             val distStartMovement = xFinger0StartMovement - xFinger1StartMovement
 
             val xFinger0CurrentMovement = event.getX(0)
             val xFinger1CurrentMovement = event.getX(1)
             val distCurrentMovement = xFinger0CurrentMovement - xFinger1CurrentMovement
 
-            val threshold = 30
-            if((distCurrentMovement < (distStartMovement + threshold)) && (distCurrentMovement > (distStartMovement - threshold)))
-                return true
+            val threshold = 150
+			Log.d("CustomImageView2", "doesContinueCurrentGesture test ${distStartMovement} ${distCurrentMovement}")
+            if((distCurrentMovement < (distStartMovement + threshold)) && (distCurrentMovement > (distStartMovement - threshold))){
+				Log.d("CustomImageView2", "doesContinueCurrentGesture rotation continue checked")
+				return true
+			}
+
         }
         else if(isScaleGestureDetected){
             // calculate dist finger is increasing, decreasing
         }
+		Log.d("CustomImageView2", "doesContinueCurrentGesture failed")
         return false
     }
 
