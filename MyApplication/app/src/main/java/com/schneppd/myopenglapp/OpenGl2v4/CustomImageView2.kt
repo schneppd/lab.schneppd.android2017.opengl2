@@ -171,11 +171,6 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
                 }
             }
 
-
-
-
-
-
             if((isRotationGestureDetected || isScaleGestureDetected) && doesContinueCurrentGesture(event)){
                 if(isRotationGestureDetected){
                     Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer continue rotation")
@@ -200,7 +195,24 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
     }
 
     fun doesContinueCurrentGesture(event:MotionEvent):Boolean{
-        return true
+        if(isRotationGestureDetected){
+            val startMovement = startUnknownMovement!!
+            val xFinger0StartMovement = startMovement.getX(0)
+            val xFinger1StartMovement = startMovement.getX(1)
+            val distStartMovement = xFinger0StartMovement - xFinger1StartMovement
+
+            val xFinger0CurrentMovement = event.getX(0)
+            val xFinger1CurrentMovement = event.getX(1)
+            val distCurrentMovement = xFinger0CurrentMovement - xFinger1CurrentMovement
+
+            val threshold = 30
+            if((distCurrentMovement < (distStartMovement + threshold)) && (distCurrentMovement > (distStartMovement - threshold)))
+                return true
+        }
+        else if(isScaleGestureDetected){
+            // calculate dist finger is increasing, decreasing
+        }
+        return false
     }
 
 
@@ -238,7 +250,7 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
             nbOnScaleAfterOnScaleStart++
             if(nbOnScaledCached < 4){
                 p0?.let{
-                    scaleCorrectionCache[nbOnScaledCached] = p0!!.scaleFactor
+                    scaleCorrectionCache[nbOnScaledCached] = p0.scaleFactor
                     nbOnScaledCached++
                 }
 
@@ -254,7 +266,7 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
                 if(minScale > 0.98f && maxScale < 1.02){
                     //rotate gesture
                     if(isScaleGestureDetected){
-                        //cancel scale todo
+                        //cancel scale TODO
                         isScaleGestureDetected= false
                         isRotationGestureDetected= true
                         Log.d("CustomImageView2", "onScale correct gesture to rotation")
@@ -263,7 +275,7 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
                 else{
                     //scale gesture
                     if(isRotationGestureDetected){
-                        //cancel rotate todo
+                        //cancel rotate TODO
                         isRotationGestureDetected= false
                         isScaleGestureDetected= true
                         Log.d("CustomImageView2", "onScale correct gesture to scale")
@@ -271,8 +283,6 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
                 }
                 isGestureConfirmed = true
             }
-            //Log.d("CustomImageView2", "onScale ${p0.scaleFactor} ${p0.eventTime}")
-            //TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
             return true
         }
     }
