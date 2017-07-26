@@ -43,7 +43,7 @@ class CustomGLSurfaceView(context: Context, attrs:AttributeSet) : SurfaceView(co
     }
 
     fun scaleCurrentModel(userScale:Double){
-        renderer.userScale = userScale
+        renderer.scaleModel(userScale)
     }
 
     fun moveCurrentModel(position: PointF){
@@ -52,6 +52,27 @@ class CustomGLSurfaceView(context: Context, attrs:AttributeSet) : SurfaceView(co
         //renderer.userScale = userScale
         val touchX = position.x.toDouble()
         val touchY = position.y.toDouble()
+
+        val surfaceWidth = this.width.toDouble()
+        val surfaceHeight = this.height.toDouble()
+
+        val glRangeX = surfaceWidth / 2.0
+        val glRangeY = surfaceHeight / 2.0
+
+        val glPosX = (touchX - glRangeX) / glRangeX
+        val glPosY = ((touchY - glRangeY) / glRangeY) * -1.0
+        val glPosZ = 0.0
+
+        val newPos = Vector3(glPosX, glPosY, glPosZ)
+        renderer.moveModel(newPos)
+    }
+
+    fun moveCurrentModel(position: PointL){
+        //calculate position in Gl scene
+
+        //renderer.userScale = userScale
+        val touchX = position.x
+        val touchY = position.y
 
         val surfaceWidth = this.width.toDouble()
         val surfaceHeight = this.height.toDouble()

@@ -70,6 +70,10 @@ class CustomGLRenderer(context:Context) : Renderer(context), IAsyncLoaderCallbac
             needToScale = true
         }
 
+    fun scaleModel(scale:Double){
+        userScale *= scale
+    }
+
 
     var userRotation:Double = 0.0
         get() = field

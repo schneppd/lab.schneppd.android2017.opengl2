@@ -1,6 +1,7 @@
 package com.schneppd.myopenglapp.OpenGl2v4
 
 import android.content.Context
+import android.graphics.PointF
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
@@ -32,6 +33,8 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
     val noiseMovementIgnoredBeforeDetectDragAfterTwoFingerGestureStop = 5
     var numberMovementToIgnore = 0
 
+    var executorTouchGesture:CustomGLSurfaceView? = null
+
 
 
 
@@ -57,6 +60,10 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
     init {
         scaleDetector = ScaleGestureDetector(context, ScaleListener())
         this.setOnTouchListener(this)
+    }
+
+    fun linkWith(executor:CustomGLSurfaceView){
+        executorTouchGesture = executor
     }
 
     ///process touch
@@ -136,6 +143,9 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
                     val pointerX = event.getX(p)
                     val pointerY = event.getY(p)
                     Log.d("CustomImageView2", "t:${time} drag to pointer:${pointerId} x:${pointerX} y:${pointerY}")
+                    val pos = PointL(pointerX.toDouble(), pointerY.toDouble())
+                    executorTouchGesture?.moveCurrentModel(pos)
+
                 }
             }
             else{
@@ -179,10 +189,16 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
 
             if((isRotationGestureDetected || isScaleGestureDetected) && doesContinueCurrentGesture(event)){
                 if(isRotationGestureDetected){
-                    Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer continue rotation")
+                    val newPosition = extractStorablePositionFrom(event)
+                    val angle = angleBetween2Lines(startUnknownMovement!!, newPosition)
+                    Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer angle: ${angle}")
+                    executorTouchGesture?.rotateCurrentModel(angle.toDouble())
                 }
                 if(isScaleGestureDetected){
-                    Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer continue scale")
+                    val newPosition = extractStorablePositionFrom(event)
+                    val scale = scaleBetween2Lines(startUnknownMovement!!, newPosition)
+                    Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer scale: ${scale}")
+                    executorTouchGesture?.scaleCurrentModel(scale.toDouble())
                 }
 
             }
@@ -196,18 +212,6 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
                     recordeSwitchNewMovement(event)
                     Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer switch to rotation")
                 }
-            }
-
-
-            if(isRotationGestureDetected){
-                val newPosition = extractStorablePositionFrom(event)
-                val angle = angleBetween2Lines(startUnknownMovement!!, newPosition)
-                Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer angle: ${angle}")
-            }
-            else if(isScaleGestureDetected){
-                val newPosition = extractStorablePositionFrom(event)
-                val scale = scaleBetween2Lines(startUnknownMovement!!, newPosition)
-                Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer scale: ${scale}")
             }
 
         }

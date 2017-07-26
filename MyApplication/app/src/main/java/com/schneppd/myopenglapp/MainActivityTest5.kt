@@ -17,6 +17,7 @@ class MainActivityTest5 : MainActivityBase()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        ivTrackpad.linkWith(svUserModel)
     }
 
 
