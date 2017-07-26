@@ -283,25 +283,101 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
 
         }
         else if(isScaleGestureDetected){
+            return true
+            /*
+            //idea: use rotate angle to test move
             // calculate dist finger is increasing, decreasing
             val startMovement = startUnknownMovement!!
+            val newPosition = extractStorablePositionFrom(event)
             val minThresholdMovement = FloatArray(4)
             val maxThresholdMovement = FloatArray(4)
 
-            val threshold = 70f
+            //create boundaries detection
+            val threshold = 150f
             startMovement.forEachIndexed { index, fl -> run{
-                var translation = 0f
-                //the translation is applied on x coordinates
-                if(index == 0 || index == 2){
-                    translation = threshold
+                    var newPosition = fl
+                    //the translation is applied on x coordinates
+                    if(index == 0){
+                        minThresholdMovement[index] = fl - threshold
+                        maxThresholdMovement[index] = fl + threshold
+                    }
+                    else if(index == 2){
+                        minThresholdMovement[index] = fl - threshold
+                        maxThresholdMovement[index] = fl + threshold
+                    }
+                    else{
+                        minThresholdMovement[index] = fl
+                        maxThresholdMovement[index] = fl
+                    }
+
                 }
-                val newPosition = fl + translation
-                minThresholdMovement[index] = newPosition
-                maxThresholdMovement[index] = newPosition
-            }  }
+            }
 
 
-            val newPosition = extractStorablePositionFrom(event)
+            val firstFingerMinSegment = FloatArray(4)
+            firstFingerMinSegment[0] = minThresholdMovement[0]
+            firstFingerMinSegment[1] = minThresholdMovement[1]
+            firstFingerMinSegment[2] = newPosition[0]
+            firstFingerMinSegment[3] = newPosition[1]
+            val secondFingerMinSegment = FloatArray(4)
+            secondFingerMinSegment[0] = minThresholdMovement[0]
+            secondFingerMinSegment[1] = minThresholdMovement[1]
+            secondFingerMinSegment[2] = newPosition[2]
+            secondFingerMinSegment[3] = newPosition[3]
+            val firstFingerMaxSegment = FloatArray(4)
+            firstFingerMaxSegment[0] = maxThresholdMovement[0]
+            firstFingerMaxSegment[1] = maxThresholdMovement[1]
+            firstFingerMaxSegment[2] = newPosition[0]
+            firstFingerMaxSegment[3] = newPosition[1]
+            val secondFingerMaxSegment = FloatArray(4)
+            secondFingerMaxSegment[0] = maxThresholdMovement[0]
+            secondFingerMaxSegment[1] = maxThresholdMovement[1]
+            secondFingerMaxSegment[2] = newPosition[2]
+            secondFingerMaxSegment[3] = newPosition[3]
+
+
+            val minCheckFirstFinger = angleBetween2Lines(minThresholdMovement, firstFingerMinSegment)
+            val minCheckSecondFinger = angleBetween2Lines(minThresholdMovement, secondFingerMinSegment)
+            val maxCheckFirstFinger = angleBetween2Lines(maxThresholdMovement, firstFingerMaxSegment)
+            val maxCheckSecondFinger = angleBetween2Lines(maxThresholdMovement, secondFingerMaxSegment)
+
+            val validFirstFingerPosition = (minCheckFirstFinger in 0f..180f) && (maxCheckFirstFinger in 180f..360f)
+            val validSecondFingerPosition = (minCheckSecondFinger in 0f..180f) && (maxCheckSecondFinger in 180f..360f)
+
+            Log.d("CustomImageView2", "doesContinueCurrentGesture scaleDown test ${minCheckFirstFinger} ${validFirstFingerPosition} ${minCheckSecondFinger} ${validSecondFingerPosition}")
+            if(validFirstFingerPosition && validSecondFingerPosition){
+                Log.d("CustomImageView2", "doesContinueCurrentGesture scale checked")
+                return true
+            }
+            else{
+                Log.d("CustomImageView2", "doesContinueCurrentGesture scale failed")
+            }
+            */
+
+
+            /*
+            val startDistance = distanceBetween2Points(startMovement)
+            val endDistance = distanceBetween2Points(newPosition)
+
+            val minCheckFirstFinger = angleBetween2Lines(minThresholdMovement, newPosition)
+            val maxCheckFirstFinger = angleBetween2Lines(maxThresholdMovement, )
+
+            if(startDistance <= endDistance){
+                Log.d("CustomImageView2", "doesContinueCurrentGesture scaleUp test ${minCheck} ${maxCheck}")
+                if((minCheck in 0f..180f) && (maxCheck in 180f..360f)){
+                    //scale in boundaries
+                    Log.d("CustomImageView2", "doesContinueCurrentGesture scale continue checked")
+                    return true
+                }
+            }
+            else{
+                Log.d("CustomImageView2", "doesContinueCurrentGesture scaleDown test ${minCheck} ${maxCheck}")
+            }
+            */
+
+
+
+
         }
 		Log.d("CustomImageView2", "doesContinueCurrentGesture failed")
         return false
