@@ -12,6 +12,9 @@ import java.util.*
 /**
  * Created by david.schnepp on 25/07/2017.
  */
+
+
+
 class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(context, attrs), View.OnTouchListener {
     enum class TouchEventComposition{
         UNDECIDED, ONE_FINGER, TWO_FINGER, MULTIPLE_FINGER
@@ -43,7 +46,7 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
         var startUnknownMovement:FloatArray? = null
         var scaleCorrectionCache = FloatArray(4)
         var nbOnScaledCached = 0
-        var backupMotionEvent:LinkedList<MotionEvent> = LinkedList<MotionEvent>() //used to deal with edge case on scale detected
+        var backupMotionEvent = LinkedList<FloatArray>() //used to deal with edge case on scale detected
         var onScaleStart = 0L
         var nbOnScaleAfterOnScaleStart = 0
         var nbOnMoveAfterOnScaleStart = 0
@@ -142,12 +145,7 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
         else{
             Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer isRotationGestureDetected ${isRotationGestureDetected} isScaleGestureDetected ${isScaleGestureDetected} isScaleListenerTriggered ${isScaleListenerTriggered} ${nbOnMoveAfterOnScaleStart} ${nbOnScaleAfterOnScaleStart}")
             startUnknownMovement ?: run{
-				val newPosition = FloatArray(4)
-				newPosition[0] = event.getX(0)
-				newPosition[1] = event.getY(0)
-				newPosition[2] = event.getX(1)
-				newPosition[3] = event.getY(1)
-                startUnknownMovement = newPosition
+                startUnknownMovement = extractStorablePositionFrom(event)
             }
             if(number2FingerMovementUnknown == 6 && !isScaleListenerTriggered) { //it's a rotation
                 number2FingerMovementUnknown = 0
@@ -160,7 +158,9 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
 
             //record sample data to detect if need correction (false positive)
             if(!isGestureConfirmed){
-                backupMotionEvent.add(event)
+                val newPosition = extractStorablePositionFrom(event)
+
+                backupMotionEvent.add(newPosition)
             }
 
             if(isScaleListenerTriggered && nbOnScaleAfterOnScaleStart >= 5 && !isScaleGestureDetected && !isScaleGestureDetected && !isRotationGestureDetected) {
@@ -176,7 +176,7 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
                 }
             }
 
-			/*
+
             if((isRotationGestureDetected || isScaleGestureDetected) && doesContinueCurrentGesture(event)){
                 if(isRotationGestureDetected){
                     Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer continue rotation")
@@ -189,32 +189,94 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
             else{
                 //correct if break gesture
                 if(isRotationGestureDetected){
+                    recordeSwitchNewMovement(event)
                     Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer switch to scale")
                 }
                 if(isScaleGestureDetected){
+                    recordeSwitchNewMovement(event)
                     Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer switch to rotation")
                 }
             }
-            */
+
+
+            if(isRotationGestureDetected){
+                val newPosition = extractStorablePositionFrom(event)
+                val angle = angleBetween2Lines(startUnknownMovement!!, newPosition)
+                Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer angle: ${angle}")
+            }
+            else if(isScaleGestureDetected){
+                val newPosition = extractStorablePositionFrom(event)
+                val scale = scaleBetween2Lines(startUnknownMovement!!, newPosition)
+                Log.d("CustomImageView2", "t:${time} ${nbFinger} moveTouchPointer scale: ${scale}")
+            }
 
         }
 
     }
 
+    fun recordeSwitchNewMovement(event:MotionEvent){
+        if(isRotationGestureDetected){
+            isRotationGestureDetected = false
+            isScaleGestureDetected = true
+        }
+        else{
+            isRotationGestureDetected = true
+            isScaleGestureDetected = false
+        }
+        startUnknownMovement = extractStorablePositionFrom(event)
+    }
+
+    fun extractStorablePositionFrom(event:MotionEvent) : FloatArray{
+        val newPosition = FloatArray(4)
+        newPosition[0] = event.getX(0)
+        newPosition[1] = event.getY(0)
+        newPosition[2] = event.getX(1)
+        newPosition[3] = event.getY(1)
+        return newPosition
+    }
+
+    fun angleBetween2Lines(origin:FloatArray, newPosition:FloatArray) : Float{
+        val distFirstPositionX = origin[0] - origin[2]
+        val distFirstPositionY = origin[3] - origin[1]
+        val distSecondPositionX = newPosition[0] - newPosition[2]
+        val distSecondPositionY = newPosition[3] - newPosition[1]
+
+        val angle1 = Math.atan2(distFirstPositionY.toDouble(), distFirstPositionX.toDouble())
+        val angle2  = Math.atan2(distSecondPositionY.toDouble(), distSecondPositionX.toDouble())
+
+        var calculatedAngle = Math.toDegrees(angle1 - angle2)
+        if(calculatedAngle < 0.0) calculatedAngle += 360.0
+        return calculatedAngle.toFloat()
+    }
+
+    fun scaleBetween2Lines(origin:FloatArray, newPosition:FloatArray) : Float{
+        val startDistance = distanceBetween2Points(origin)
+        val endDistance = distanceBetween2Points(newPosition)
+
+        val scale = endDistance / startDistance
+        return scale.toFloat()
+    }
+
+    fun distanceBetween2Points(points:FloatArray) : Double{
+        val distXOrigin = points[2] - points[0]
+        val distYOrigin = points[3] - points[1]
+
+        val distance = Math.sqrt( (Math.pow(distXOrigin.toDouble(), 2.0) + Math.pow(distYOrigin.toDouble(), 2.0)) )
+        return distance
+    }
+
     fun doesContinueCurrentGesture(event:MotionEvent):Boolean{
         if(isRotationGestureDetected){
             val startMovement = startUnknownMovement!!
-            val xFinger0StartMovement = startMovement[0]
-            val xFinger1StartMovement = startMovement[2]
-            val distStartMovement = xFinger0StartMovement - xFinger1StartMovement
+            val newPosition = extractStorablePositionFrom(event)
 
-            val xFinger0CurrentMovement = event.getX(0)
-            val xFinger1CurrentMovement = event.getX(1)
-            val distCurrentMovement = xFinger0CurrentMovement - xFinger1CurrentMovement
+            val startDistance = distanceBetween2Points(startMovement)
+            val endDistance = distanceBetween2Points(newPosition)
+            val changeDistance = Math.abs(startDistance - endDistance)
 
             val threshold = 150
-			Log.d("CustomImageView2", "doesContinueCurrentGesture test ${distStartMovement} ${distCurrentMovement}")
-            if((distCurrentMovement < (distStartMovement + threshold)) && (distCurrentMovement > (distStartMovement - threshold))){
+			Log.d("CustomImageView2", "doesContinueCurrentGesture test ${startDistance} ${endDistance}")
+            if(changeDistance < threshold){
 				Log.d("CustomImageView2", "doesContinueCurrentGesture rotation continue checked")
 				return true
 			}
@@ -222,6 +284,24 @@ class CustomImageView2(context: Context, attrs: AttributeSet) : ImageView(contex
         }
         else if(isScaleGestureDetected){
             // calculate dist finger is increasing, decreasing
+            val startMovement = startUnknownMovement!!
+            val minThresholdMovement = FloatArray(4)
+            val maxThresholdMovement = FloatArray(4)
+
+            val threshold = 70f
+            startMovement.forEachIndexed { index, fl -> run{
+                var translation = 0f
+                //the translation is applied on x coordinates
+                if(index == 0 || index == 2){
+                    translation = threshold
+                }
+                val newPosition = fl + translation
+                minThresholdMovement[index] = newPosition
+                maxThresholdMovement[index] = newPosition
+            }  }
+
+
+            val newPosition = extractStorablePositionFrom(event)
         }
 		Log.d("CustomImageView2", "doesContinueCurrentGesture failed")
         return false
